@@ -17,7 +17,6 @@ export default function AuthForm({ mode }: AuthFormProps) {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-
   const router = useRouter();
   const supabase = createClient();
 
@@ -32,34 +31,23 @@ export default function AuthForm({ mode }: AuthFormProps) {
           email,
           password,
           options: {
-            data: {
-              name,
-              role,
-            },
+            data: { name, role },
           },
         });
-
         if (error) throw error;
-
-        if (data.user) {
-          router.push(`/dashboard/${role}`);
-        }
+        if (data.user) router.push(`/dashboard/${role}`);
       } else {
         const { data, error } = await supabase.auth.signInWithPassword({
           email,
           password,
         });
-
         if (error) throw error;
-
         if (data.user) {
-          // Get user profile to determine role
           const { data: profile } = await supabase
             .from("users")
             .select("role")
             .eq("id", data.user.id)
             .single();
-
           const userRole = profile?.role || "student";
           router.push(`/dashboard/${userRole}`);
         }
@@ -72,61 +60,70 @@ export default function AuthForm({ mode }: AuthFormProps) {
   };
 
   return (
-    <div className="w-full max-w-md mx-auto">
-      <div className="card">
-        <div className="text-center mb-6">
-          <h2 className="text-2xl font-bold text-gray-900">
+    <div className="w-full max-w-md mx-auto mt-12 mb-24">
+      <div className="rounded-2xl shadow-lg border border-gray-100 bg-gradient-to-br from-blue-50 via-white to-purple-50 px-8 py-10 animate-fade-in">
+        <div className="text-center mb-8">
+          <h2 className="text-3xl font-extrabold text-blue-900 tracking-tight drop-shadow">
             {mode === "login" ? "Welcome Back" : "Create Account"}
           </h2>
-          <p className="text-gray-600 mt-2">
+          <p className="text-base text-blue-700 mt-2 font-medium">
             {mode === "login"
-              ? "Sign in to your account to continue"
-              : "Join our learning platform today"}
+              ? "Sign in to continue your learning journey"
+              : "Join our platform and start learning today"}
           </p>
         </div>
 
         {error && (
-          <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-4">
+          <div className="bg-red-100 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-5 shadow-sm animate-shake">
             {error}
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-5">
           {mode === "register" && (
             <>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-semibold text-gray-700 mb-1">
                   Full Name
                 </label>
                 <div className="relative">
-                  <User className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+                  <User className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-indigo-400" />
                   <input
                     type="text"
                     value={name}
                     onChange={(e) => setName(e.target.value)}
-                    className="input-field pl-10"
-                    placeholder="Enter your full name"
+                    className="input-field pl-10 rounded-xl border border-blue-100 focus:ring-2 focus:ring-blue-300 transition-all"
+                    placeholder="Your full name"
                     required
                   />
                 </div>
               </div>
-
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-semibold text-gray-700 mb-1">
                   Role
                 </label>
                 <div className="relative">
-                  <UserCheck className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+                  <UserCheck className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-indigo-400 pointer-events-none" />
                   <select
                     value={role}
                     onChange={(e) =>
                       setRole(e.target.value as "student" | "teacher")
                     }
-                    className="input-field pl-10"
+                    className="input-field pl-10 pr-10 rounded-xl border border-blue-100 focus:ring-2 focus:ring-indigo-300 bg-white transition-all appearance-none
+        text-gray-800 font-medium shadow-sm h-12
+        hover:bg-indigo-50
+        focus:border-indigo-400
+        group"
                     required
+                    style={{
+                      backgroundImage:
+                        'url(\'data:image/svg+xml;utf8,<svg fill="%236673d9" viewBox="0 0 24 24" width="24" height="24" xmlns="http://www.w3.org/2000/svg"><path d="M7 10l5 5 5-5"/></svg>\')',
+                      backgroundRepeat: "no-repeat",
+                      backgroundPosition: "right 1rem center",
+                    }}
                   >
-                    <option value="student">Student</option>
-                    <option value="teacher">Teacher</option>
+                    <option value="student">👨‍🎓 Student</option>
+                    <option value="teacher">👩‍🏫 Teacher</option>
                   </select>
                 </div>
               </div>
@@ -134,41 +131,42 @@ export default function AuthForm({ mode }: AuthFormProps) {
           )}
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-semibold text-gray-700 mb-1">
               Email Address
             </label>
             <div className="relative">
-              <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+              <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-indigo-400" />
               <input
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="input-field pl-10"
-                placeholder="Enter your email"
+                className="input-field pl-10 rounded-xl border border-blue-100 focus:ring-2 focus:ring-blue-300 transition-all"
+                placeholder="you@example.com"
                 required
               />
             </div>
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-semibold text-gray-700 mb-1">
               Password
             </label>
             <div className="relative">
-              <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+              <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-indigo-400" />
               <input
                 type={showPassword ? "text" : "password"}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="input-field pl-10 pr-10"
-                placeholder="Enter your password"
+                className="input-field pl-10 pr-10 rounded-xl border border-blue-100 focus:ring-2 focus:ring-blue-300 transition-all"
+                placeholder="Enter a password"
                 required
                 minLength={6}
               />
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-indigo-600 transition"
+                tabIndex={-1}
               >
                 {showPassword ? (
                   <EyeOff className="h-5 w-5" />
@@ -182,7 +180,12 @@ export default function AuthForm({ mode }: AuthFormProps) {
           <button
             type="submit"
             disabled={loading}
-            className="w-full btn-primary py-3 text-base font-medium"
+            className={`w-full py-3 text-base font-semibold rounded-xl transition-colors
+              bg-gradient-to-r from-indigo-600 via-blue-600 to-purple-600
+              text-white shadow-lg hover:from-indigo-700 hover:to-blue-700
+              focus:outline-none focus:ring-2 focus:ring-indigo-400
+              ${loading ? "opacity-70 cursor-wait" : ""}
+            `}
           >
             {loading ? (
               <div className="flex items-center justify-center">
@@ -197,20 +200,22 @@ export default function AuthForm({ mode }: AuthFormProps) {
           </button>
         </form>
 
-        <div className="mt-6 text-center">
-          <p className="text-sm text-gray-600">
+        <div className="mt-8 text-center text-sm">
+          <p className="text-blue-700 font-medium">
             {mode === "login"
               ? "Don't have an account? "
               : "Already have an account? "}
             <a
               href={mode === "login" ? "/auth/register" : "/auth/login"}
-              className="text-primary-600 hover:text-primary-700 font-medium"
+              className="text-indigo-700 underline hover:text-indigo-900 px-1 transition"
             >
               {mode === "login" ? "Sign up" : "Sign in"}
             </a>
           </p>
         </div>
       </div>
+
+      {/* Optional: A subtle background illustration can be added here for further style */}
     </div>
   );
 }

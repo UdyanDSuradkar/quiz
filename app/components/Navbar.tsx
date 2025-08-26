@@ -6,6 +6,15 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/app/lib/supabase/client";
 import { User, LogOut, BookOpen, Menu, X } from "lucide-react";
 
+// Utility to get initials for avatar fallback
+function getInitials(name: string) {
+  if (!name) return "";
+  const words = name.trim().split(" ");
+  return words.length > 1
+    ? words[0][0].toUpperCase() + words[1][0].toUpperCase()
+    : words[0][0].toUpperCase();
+}
+
 export default function Navbar() {
   const [user, setUser] = useState<any>(null);
   const [userProfile, setUserProfile] = useState<any>(null);
@@ -15,15 +24,11 @@ export default function Navbar() {
 
   useEffect(() => {
     getUser();
-
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((event, session) => {
-      if (event === "SIGNED_IN" || event === "SIGNED_OUT") {
-        getUser();
-      }
+      if (event === "SIGNED_IN" || event === "SIGNED_OUT") getUser();
     });
-
     return () => subscription.unsubscribe();
   }, []);
 
@@ -51,12 +56,12 @@ export default function Navbar() {
   };
 
   return (
-    <nav className="bg-white shadow-sm border-b border-gray-200">
+    <nav className="bg-white shadow-sm border-b border-gray-200 sticky top-0 z-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
           {/* Logo */}
           <Link href="/" className="flex items-center space-x-2">
-            <BookOpen className="h-8 w-8 text-primary-600" />
+            <BookOpen className="h-8 w-8 text-indigo-600" />
             <span className="text-xl font-bold text-gray-900">QuizLearn</span>
           </Link>
 
@@ -64,21 +69,30 @@ export default function Navbar() {
           <div className="hidden md:flex items-center space-x-4">
             {user ? (
               <>
-                <Link
-                  href={`/dashboard/${userProfile?.role || "student"}`}
-                  className="text-gray-700 hover:text-primary-600 px-3 py-2 rounded-md text-sm font-medium transition-colors"
-                >
-                  Dashboard
-                </Link>
+                <div className="flex items-center space-x-2">
+                  <Link
+                    href={`/dashboard/${userProfile?.role || "student"}`}
+                    className="text-gray-700 hover:text-indigo-700 px-3 py-2 rounded-md text-base font-semibold transition-colors flex items-center"
+                  >
+                    Dashboard
+                    {userProfile?.name && (
+                      <span className="ml-2 text-indigo-800 font-semibold text-base">
+                        {userProfile.name}
+                      </span>
+                    )}
+                  </Link>
+                  {/* Role badge bigger and visible */}
+                  {userProfile?.role && (
+                    <span className="ml-2 px-4 py-1 rounded-full bg-indigo-600 text-white font-extrabold text-lg shadow capitalize">
+                      {userProfile.role}
+                    </span>
+                  )}
+                </div>
                 <div className="flex items-center space-x-3">
-                  <div className="flex items-center space-x-2">
-                    <User className="h-5 w-5 text-gray-500" />
-                    <span className="text-sm text-gray-700">
-                      {userProfile?.name || user.email}
-                    </span>
-                    <span className="text-xs bg-primary-100 text-primary-800 px-2 py-1 rounded-full capitalize">
-                      {userProfile?.role}
-                    </span>
+                  <div className="w-8 h-8 rounded-full bg-indigo-400 flex items-center justify-center font-bold text-white text-lg shadow">
+                    {userProfile?.name
+                      ? getInitials(userProfile.name)
+                      : (user?.email[0] || "U").toUpperCase()}
                   </div>
                   <button
                     onClick={handleLogout}
@@ -93,11 +107,14 @@ export default function Navbar() {
               <div className="flex items-center space-x-3">
                 <Link
                   href="/auth/login"
-                  className="text-gray-700 hover:text-primary-600 px-3 py-2 rounded-md text-sm font-medium transition-colors"
+                  className="px-5 py-2 rounded-xl font-semibold text-blue-700 bg-blue-50 hover:bg-blue-100 transition"
                 >
                   Login
                 </Link>
-                <Link href="/auth/register" className="btn-primary text-sm">
+                <Link
+                  href="/auth/register"
+                  className="bg-gradient-to-r from-purple-600 via-indigo-600 to-blue-600 text-white py-2 px-5 rounded-xl font-semibold shadow hover:from-purple-700 hover:to-blue-700 transition"
+                >
                   Sign Up
                 </Link>
               </div>
@@ -108,7 +125,7 @@ export default function Navbar() {
           <div className="md:hidden">
             <button
               onClick={() => setIsMenuOpen(!isMenuOpen)}
-              className="text-gray-500 hover:text-gray-700 p-2 rounded-md"
+              className="text-gray-400 hover:text-indigo-700 p-2 rounded transition"
             >
               {isMenuOpen ? (
                 <X className="h-6 w-6" />
@@ -121,46 +138,57 @@ export default function Navbar() {
 
         {/* Mobile Navigation */}
         {isMenuOpen && (
-          <div className="md:hidden border-t border-gray-200 py-4">
+          <div className="md:hidden border-t border-gray-200 py-4 transition-all duration-200">
             {user ? (
-              <div className="space-y-3">
-                <div className="px-3 py-2">
-                  <div className="text-sm text-gray-700 font-medium">
-                    {userProfile?.name || user.email}
-                  </div>
-                  <div className="text-xs text-gray-500 capitalize">
-                    {userProfile?.role}
+              <>
+                <div className="flex items-center space-x-2 px-3 py-2">
+                  <Link
+                    href={`/dashboard/${userProfile?.role || "student"}`}
+                    className="block text-gray-700 hover:text-indigo-800 text-lg font-bold transition-colors"
+                    onClick={() => setIsMenuOpen(false)}
+                  >
+                    Dashboard
+                  </Link>
+                  {userProfile?.name && (
+                    <span className="ml-3 text-indigo-800 font-semibold text-base">
+                      {userProfile.name}
+                    </span>
+                  )}
+                  {userProfile?.role && (
+                    <span className="ml-2 px-4 py-1 rounded-full bg-indigo-600 text-white font-bold text-lg shadow capitalize">
+                      {userProfile.role}
+                    </span>
+                  )}
+                </div>
+                <div className="flex items-center space-x-3 px-3 mb-2">
+                  <div className="w-7 h-7 rounded-full bg-indigo-400 flex items-center justify-center font-bold text-white text-md shadow">
+                    {userProfile?.name
+                      ? getInitials(userProfile.name)
+                      : (user?.email[0] || "U").toUpperCase()}
                   </div>
                 </div>
-                <Link
-                  href={`/dashboard/${userProfile?.role || "student"}`}
-                  className="block text-gray-700 hover:text-primary-600 px-3 py-2 text-sm font-medium"
-                  onClick={() => setIsMenuOpen(false)}
-                >
-                  Dashboard
-                </Link>
                 <button
                   onClick={() => {
                     handleLogout();
                     setIsMenuOpen(false);
                   }}
-                  className="block w-full text-left text-red-600 hover:text-red-700 px-3 py-2 text-sm font-medium"
+                  className="block w-full text-left text-red-700 hover:text-red-900 px-3 py-2 rounded font-medium transition"
                 >
                   Logout
                 </button>
-              </div>
+              </>
             ) : (
-              <div className="space-y-3">
+              <div className="flex flex-col gap-3 px-3">
                 <Link
                   href="/auth/login"
-                  className="block text-gray-700 hover:text-primary-600 px-3 py-2 text-sm font-medium"
+                  className="block text-blue-700 hover:text-indigo-800 py-2 rounded font-medium transition"
                   onClick={() => setIsMenuOpen(false)}
                 >
                   Login
                 </Link>
                 <Link
                   href="/auth/register"
-                  className="block text-primary-600 hover:text-primary-700 px-3 py-2 text-sm font-medium"
+                  className="block bg-gradient-to-r from-purple-600 via-indigo-600 to-blue-600 text-white py-2 px-5 rounded-xl font-semibold shadow hover:from-purple-700 hover:to-blue-700 transition"
                   onClick={() => setIsMenuOpen(false)}
                 >
                   Sign Up

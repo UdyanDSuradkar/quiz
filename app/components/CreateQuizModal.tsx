@@ -1,7 +1,8 @@
 "use client";
-
 import { useState } from "react";
 import { X, Plus } from "lucide-react";
+import { toast } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 
 interface CreateQuizModalProps {
   isOpen: boolean;
@@ -18,12 +19,10 @@ export default function CreateQuizModal({
   const [subject, setSubject] = useState("");
   const [grade, setGrade] = useState("");
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    setError("");
 
     try {
       const response = await fetch("/api/quizzes", {
@@ -38,15 +37,23 @@ export default function CreateQuizModal({
         const errorData = await response.json();
         throw new Error(errorData.error || "Failed to create quiz");
       }
-
-      // Reset form
+      // 🎉 Success toast
+      toast.success("Quiz created successfully!", {
+        position: "top-right",
+        autoClose: 3000,
+      });
+      // Reset form and close
       setTitle("");
       setSubject("");
       setGrade("");
       onSuccess();
       onClose();
     } catch (error: any) {
-      setError(error.message);
+      // ❌ Error toast
+      toast.error(error.message || "Failed to create quiz", {
+        position: "top-right",
+        autoClose: 4000,
+      });
     } finally {
       setLoading(false);
     }
@@ -66,14 +73,7 @@ export default function CreateQuizModal({
             <X className="h-6 w-6" />
           </button>
         </div>
-
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
-          {error && (
-            <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
-              {error}
-            </div>
-          )}
-
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Quiz Title *
@@ -87,21 +87,32 @@ export default function CreateQuizModal({
               required
             />
           </div>
-
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Subject *
             </label>
-            <input
-              type="text"
+            <select
               value={subject}
               onChange={(e) => setSubject(e.target.value)}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              placeholder="e.g., Mathematics, Science, History"
               required
-            />
+            >
+              <option value="">Select subject</option>
+              <option value="Mathematics">Mathematics</option>
+              <option value="Science">Science</option>
+              <option value="English">English</option>
+              <option value="History">History</option>
+              <option value="Geography">Geography</option>
+              <option value="Computer Science">Computer Science</option>
+              <option value="Social Studies">Social Studies</option>
+              <option value="Physics">Physics</option>
+              <option value="Chemistry">Chemistry</option>
+              <option value="Biology">Biology</option>
+              <option value="Economics">Economics</option>
+              <option value="Physical Education">Physical Education</option>
+              <option value="Other">Other</option>
+            </select>
           </div>
-
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Grade/Class *
@@ -127,7 +138,6 @@ export default function CreateQuizModal({
               <option value="12">Grade 12</option>
             </select>
           </div>
-
           <div className="flex space-x-3 pt-4">
             <button
               type="button"

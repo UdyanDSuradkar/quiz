@@ -2,6 +2,8 @@
 
 import { useState, useEffect } from "react";
 import { X, Save } from "lucide-react";
+import { toast } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 
 interface Quiz {
   id: string;
@@ -27,14 +29,12 @@ export default function EditQuizModal({
   const [subject, setSubject] = useState("");
   const [grade, setGrade] = useState("");
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
 
   useEffect(() => {
     if (quiz) {
       setTitle(quiz.title);
       setSubject(quiz.subject);
       setGrade(quiz.grade);
-      setError("");
     }
   }, [quiz]);
 
@@ -43,7 +43,6 @@ export default function EditQuizModal({
     if (!quiz) return;
 
     setLoading(true);
-    setError("");
 
     try {
       const response = await fetch(`/api/quizzes/${quiz.id}`, {
@@ -59,10 +58,20 @@ export default function EditQuizModal({
         throw new Error(errorData.error || "Failed to update quiz");
       }
 
+      // 🎉 Success toast
+      toast.success("Quiz updated successfully!", {
+        position: "top-right",
+        autoClose: 3000,
+      });
+
       onSuccess();
       onClose();
     } catch (error: any) {
-      setError(error.message);
+      // ❌ Error toast
+      toast.error(error.message || "Failed to update quiz", {
+        position: "top-right",
+        autoClose: 4000,
+      });
     } finally {
       setLoading(false);
     }
@@ -84,12 +93,6 @@ export default function EditQuizModal({
         </div>
 
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
-          {error && (
-            <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
-              {error}
-            </div>
-          )}
-
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Quiz Title *
@@ -108,14 +111,27 @@ export default function EditQuizModal({
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Subject *
             </label>
-            <input
-              type="text"
+            <select
               value={subject}
               onChange={(e) => setSubject(e.target.value)}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              placeholder="e.g., Mathematics, Science, History"
               required
-            />
+            >
+              <option value="">Select subject</option>
+              <option value="Mathematics">Mathematics</option>
+              <option value="Science">Science</option>
+              <option value="English">English</option>
+              <option value="History">History</option>
+              <option value="Geography">Geography</option>
+              <option value="Computer Science">Computer Science</option>
+              <option value="Social Studies">Social Studies</option>
+              <option value="Physics">Physics</option>
+              <option value="Chemistry">Chemistry</option>
+              <option value="Biology">Biology</option>
+              <option value="Economics">Economics</option>
+              <option value="Physical Education">Physical Education</option>
+              <option value="Other">Other</option>
+            </select>
           </div>
 
           <div>

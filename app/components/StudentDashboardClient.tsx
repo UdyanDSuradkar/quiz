@@ -95,31 +95,39 @@ export default function StudentDashboardClient({
   const filterQuizzes = () => {
     let filtered = quizzes;
 
-    // Search filter
-    if (searchTerm) {
-      filtered = filtered.filter(
-        (quiz) =>
-          quiz.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          quiz.subject.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          quiz.users.name.toLowerCase().includes(searchTerm.toLowerCase())
-      );
+    // Search filter with safe null checks
+    if (searchTerm.trim() !== "") {
+      const lowerSearch = searchTerm.toLowerCase();
+
+      filtered = filtered.filter((quiz) => {
+        // Safe access with fallbacks to empty string
+        const title = (quiz?.title || "").toLowerCase();
+        const subject = (quiz?.subject || "").toLowerCase();
+        const userName = (quiz?.users?.name || "").toLowerCase();
+
+        return (
+          title.includes(lowerSearch) ||
+          subject.includes(lowerSearch) ||
+          userName.includes(lowerSearch)
+        );
+      });
     }
 
     // Subject filter
     if (selectedSubject !== "all") {
-      filtered = filtered.filter((quiz) => quiz.subject === selectedSubject);
+      filtered = filtered.filter((quiz) => quiz?.subject === selectedSubject);
     }
 
     // Grade filter
     if (selectedGrade !== "all") {
-      filtered = filtered.filter((quiz) => quiz.grade === selectedGrade);
+      filtered = filtered.filter((quiz) => quiz?.grade === selectedGrade);
     }
 
     // Attempt status filter
     if (showAttempted === "attempted") {
-      filtered = filtered.filter((quiz) => quiz.attempted);
+      filtered = filtered.filter((quiz) => quiz?.attempted === true);
     } else if (showAttempted === "not-attempted") {
-      filtered = filtered.filter((quiz) => !quiz.attempted);
+      filtered = filtered.filter((quiz) => quiz?.attempted !== true);
     }
 
     setFilteredQuizzes(filtered);

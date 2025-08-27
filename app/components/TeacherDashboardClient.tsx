@@ -5,6 +5,8 @@ import { BookOpen, Users, FileText, Plus, Loader } from "lucide-react";
 import CreateQuizModal from "@/app/components/CreateQuizModal";
 import EditQuizModal from "@/app/components/EditQuizModal";
 import QuizCard from "@/app/components/QuizCard";
+import { toast } from "react-toastify";
+import toast2 from "react-hot-toast";
 
 interface Quiz {
   id: string;
@@ -31,6 +33,7 @@ export default function TeacherDashboardClient({
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [editingQuiz, setEditingQuiz] = useState<Quiz | null>(null);
+
   const [stats, setStats] = useState({
     totalQuizzes: 0,
     totalQuestions: 0,
@@ -39,57 +42,119 @@ export default function TeacherDashboardClient({
   });
 
   useEffect(() => {
-    fetchQuizzes();
+    fetchData();
   }, []);
 
-  const fetchQuizzes = async () => {
+  const fetchData = async () => {
+    setLoading(true);
     try {
-      const response = await fetch("/api/quizzes");
-      if (response.ok) {
-        const data = await response.json();
-        setQuizzes(data);
+      const quizzesResponse = await fetch("/api/quizzes");
+      const quizzesData = quizzesResponse.ok
+        ? await quizzesResponse.json()
+        : [];
+      setQuizzes(quizzesData);
 
-        // Calculate stats
-        const totalQuestions = data.reduce(
-          (sum: number, quiz: Quiz) => sum + (quiz.questions?.[0]?.count || 0),
-          0
-        );
+      const resultsResponse = await fetch("/api/teacher/results");
+      const resultsData = resultsResponse.ok
+        ? await resultsResponse.json()
+        : [];
 
-        setStats({
-          totalQuizzes: data.length,
-          totalQuestions,
-          totalAttempts: 0, // Will be updated in Phase 2
-          averageScore: 0, // Will be updated in Phase 2
-        });
-      }
+      const totalQuestions = quizzesData.reduce(
+        (sum: number, quiz: Quiz) => sum + (quiz.questions?.[0]?.count || 0),
+        0
+      );
+      const totalAttempts = resultsData.length;
+      const averageScore =
+        totalAttempts > 0
+          ? Math.round(
+              (resultsData.reduce(
+                (sum: number, a: any) =>
+                  sum +
+                  (a.score != null && a.total_questions
+                    ? a.score / a.total_questions
+                    : 0),
+                0
+              ) /
+                totalAttempts) *
+                100
+            )
+          : 0;
+
+      setStats({
+        totalQuizzes: quizzesData.length,
+        totalQuestions,
+        totalAttempts,
+        averageScore,
+      });
     } catch (error) {
-      console.error("Error fetching quizzes:", error);
+      console.error("Error fetching data:", error);
     } finally {
       setLoading(false);
     }
   };
 
-  const handleDeleteQuiz = async (quizId: string) => {
-    if (
-      !confirm(
-        "Are you sure you want to delete this quiz? This action cannot be undone."
-      )
-    ) {
-      return;
-    }
+  // Custom confirmation using react-hot-toast
+  const handleDeleteQuiz = (quizId: string) => {
+    toast2(
+      (t) => (
+        <div className="p-4">
+          <div className="mb-3">
+            <h3 className="font-semibold text-gray-900">Delete Quiz</h3>
+            <p className="text-gray-600 text-sm mt-1">
+              Are you sure you want to delete this quiz? This action cannot be
+              undone.
+            </p>
+          </div>
+          <div className="flex gap-2 justify-end">
+            <button
+              className="px-3 py-1 text-sm bg-gray-100 hover:bg-gray-200 text-gray-700 rounded transition-colors"
+              onClick={() => toast2.dismiss(t.id)}
+            >
+              Cancel
+            </button>
+            <button
+              className="px-3 py-1 text-sm bg-red-600 hover:bg-red-700 text-white rounded transition-colors"
+              onClick={async () => {
+                toast2.dismiss(t.id);
+                await performDelete(quizId);
+              }}
+            >
+              Delete
+            </button>
+          </div>
+        </div>
+      ),
+      {
+        duration: Infinity,
+        style: {
+          maxWidth: "400px",
+        },
+      }
+    );
+  };
 
+  const performDelete = async (quizId: string) => {
     try {
       const response = await fetch(`/api/quizzes/${quizId}`, {
         method: "DELETE",
       });
 
       if (response.ok) {
-        setQuizzes(quizzes.filter((quiz) => quiz.id !== quizId));
-        fetchQuizzes(); // Refresh to update stats
+        toast.success("Quiz deleted successfully!", {
+          position: "top-center",
+          autoClose: 3000,
+        });
+        setQuizzes((current) => current.filter((q) => q.id !== quizId));
+        fetchData();
+      } else {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Failed to delete quiz");
       }
-    } catch (error) {
-      console.error("Error deleting quiz:", error);
-      alert("Failed to delete quiz. Please try again.");
+    } catch (error: any) {
+      toast.error(error.message || "Failed to delete quiz", {
+        position: "top-center",
+        autoClose: 4000,
+      });
     }
   };
 
@@ -231,7 +296,7 @@ export default function TeacherDashboardClient({
               <QuizCard
                 key={quiz.id}
                 quiz={quiz}
-                onDelete={handleDeleteQuiz}
+                onDelete={() => handleDeleteQuiz(quiz.id)}
                 onEdit={handleEditQuiz}
               />
             ))}
@@ -243,9 +308,8 @@ export default function TeacherDashboardClient({
       <CreateQuizModal
         isOpen={showCreateModal}
         onClose={() => setShowCreateModal(false)}
-        onSuccess={fetchQuizzes}
+        onSuccess={fetchData}
       />
-
       <EditQuizModal
         isOpen={showEditModal}
         quiz={editingQuiz}
@@ -253,7 +317,7 @@ export default function TeacherDashboardClient({
           setShowEditModal(false);
           setEditingQuiz(null);
         }}
-        onSuccess={fetchQuizzes}
+        onSuccess={fetchData}
       />
     </div>
   );

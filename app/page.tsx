@@ -107,7 +107,7 @@ export default function HomePage() {
           </p>
           <Link
             href="/auth/register"
-            className="btn-primary px-8 py-4 text-lg font-medium"
+            className="text-white btn-primary px-8 py-4 text-lg font-medium"
           >
             Sign Up Today
           </Link>

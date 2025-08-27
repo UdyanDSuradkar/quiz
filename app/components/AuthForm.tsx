@@ -1,5 +1,4 @@
 "use client";
-
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/app/lib/supabase/client";
@@ -27,6 +26,26 @@ export default function AuthForm({ mode }: AuthFormProps) {
 
     try {
       if (mode === "register") {
+        // Check if email exists in your custom users table (prevents duplicate profiles)
+        const { data: existingUsers, error: checkError } = await supabase
+          .from("users")
+          .select("id")
+          .eq("email", email)
+          .limit(1);
+
+        if (checkError) {
+          setError("Error checking for existing user");
+          setLoading(false);
+          return;
+        }
+
+        if (existingUsers && existingUsers.length > 0) {
+          setError("User already registered with this email");
+          setLoading(false);
+          return;
+        }
+
+        // Proceed to Supabase register
         const { data, error } = await supabase.auth.signUp({
           email,
           password,
@@ -35,8 +54,13 @@ export default function AuthForm({ mode }: AuthFormProps) {
           },
         });
         if (error) throw error;
-        if (data.user) router.push(`/dashboard/${role}`);
+        if (data.user) {
+          // Prevent auto-login: sign out and redirect to login page
+          await supabase.auth.signOut();
+          router.push("/auth/login");
+        }
       } else {
+        // Login logic unchanged
         const { data, error } = await supabase.auth.signInWithPassword({
           email,
           password,
@@ -72,13 +96,11 @@ export default function AuthForm({ mode }: AuthFormProps) {
               : "Join our platform and start learning today"}
           </p>
         </div>
-
         {error && (
           <div className="bg-red-100 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-5 shadow-sm animate-shake">
             {error}
           </div>
         )}
-
         <form onSubmit={handleSubmit} className="space-y-5">
           {mode === "register" && (
             <>
@@ -109,11 +131,7 @@ export default function AuthForm({ mode }: AuthFormProps) {
                     onChange={(e) =>
                       setRole(e.target.value as "student" | "teacher")
                     }
-                    className="input-field pl-10 pr-10 rounded-xl border border-blue-100 focus:ring-2 focus:ring-indigo-300 bg-white transition-all appearance-none
-        text-gray-800 font-medium shadow-sm h-12
-        hover:bg-indigo-50
-        focus:border-indigo-400
-        group"
+                    className="input-field pl-10 pr-10 rounded-xl border border-blue-100 focus:ring-2 focus:ring-indigo-300 bg-white transition-all appearance-none text-gray-800 font-medium shadow-sm h-12 hover:bg-indigo-50 focus:border-indigo-400 group"
                     required
                     style={{
                       backgroundImage:
@@ -129,7 +147,6 @@ export default function AuthForm({ mode }: AuthFormProps) {
               </div>
             </>
           )}
-
           <div>
             <label className="block text-sm font-semibold text-gray-700 mb-1">
               Email Address
@@ -146,7 +163,6 @@ export default function AuthForm({ mode }: AuthFormProps) {
               />
             </div>
           </div>
-
           <div>
             <label className="block text-sm font-semibold text-gray-700 mb-1">
               Password
@@ -176,7 +192,6 @@ export default function AuthForm({ mode }: AuthFormProps) {
               </button>
             </div>
           </div>
-
           <button
             type="submit"
             disabled={loading}
@@ -199,7 +214,6 @@ export default function AuthForm({ mode }: AuthFormProps) {
             )}
           </button>
         </form>
-
         <div className="mt-8 text-center text-sm">
           <p className="text-blue-700 font-medium">
             {mode === "login"
@@ -214,8 +228,6 @@ export default function AuthForm({ mode }: AuthFormProps) {
           </p>
         </div>
       </div>
-
-      {/* Optional: A subtle background illustration can be added here for further style */}
     </div>
   );
 }

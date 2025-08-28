@@ -1,5 +1,6 @@
 import { requireAuth, getUserProfile } from "@/app/lib/auth";
 import StudentDashboardClient from "@/app/components/StudentDashboardClient";
+export const dynamic = "force-dynamic";
 
 export default async function StudentDashboard() {
   const user = await requireAuth();

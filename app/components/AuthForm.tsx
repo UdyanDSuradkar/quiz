@@ -3,10 +3,27 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/app/lib/supabase/client";
 import { Eye, EyeOff, User, Mail, Lock, UserCheck } from "lucide-react";
+import { toast } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 
 interface AuthFormProps {
   mode: "login" | "register";
 }
+
+// Helper function to get the correct URL for different environments
+const getURL = () => {
+  let url =
+    process?.env?.NEXT_PUBLIC_SITE_URL ?? // Set this to your site URL in production
+    process?.env?.NEXT_PUBLIC_VERCEL_URL ?? // Automatically set by Vercel
+    "http://localhost:3000"; // development default
+
+  // Make sure to include `https://` when not localhost
+  url = url.includes("http") ? url : `https://${url}`;
+  // Make sure to include trailing `/`
+  url = url.charAt(url.length - 1) === "/" ? url : `${url}/`;
+
+  return url;
+};
 
 export default function AuthForm({ mode }: AuthFormProps) {
   const [email, setEmail] = useState("");
@@ -36,48 +53,81 @@ export default function AuthForm({ mode }: AuthFormProps) {
         if (checkError) {
           setError("Error checking for existing user");
           setLoading(false);
+          toast.error("Registration error: Could not check user email!");
           return;
         }
 
         if (existingUsers && existingUsers.length > 0) {
           setError("User already registered with this email");
           setLoading(false);
+          toast.error("User already registered with this email!");
           return;
         }
 
-        // Proceed to Supabase register
+        // Proceed to Supabase register with email confirmation
         const { data, error } = await supabase.auth.signUp({
           email,
           password,
           options: {
             data: { name, role },
+            // Use dynamic URL that works on both local and Vercel
+            emailRedirectTo: `${getURL()}auth/login`,
           },
         });
+
         if (error) throw error;
+
+        // Registration successful - user will receive confirmation email
         if (data.user) {
-          // Prevent auto-login: sign out and redirect to login page
-          await supabase.auth.signOut();
-          router.push("/auth/login");
+          toast.success(
+            "Registration successful! We've sent a confirmation email to your inbox. Please click the link in the email to verify your account.",
+            { autoClose: 8000 }
+          );
+
+          // Clear form fields
+          setEmail("");
+          setPassword("");
+          setName("");
+          setRole("student");
+
+          // Show confirmation message
+          setError(
+            "✅ Account created! Please check your email and click the verification link to complete your registration."
+          );
         }
       } else {
-        // Login logic unchanged
+        // Login logic
         const { data, error } = await supabase.auth.signInWithPassword({
           email,
           password,
         });
+
         if (error) throw error;
+
         if (data.user) {
+          // Check if user's email is confirmed
+          if (!data.user.email_confirmed_at) {
+            setError(
+              "Please verify your email address before signing in. Check your inbox for a confirmation email."
+            );
+            await supabase.auth.signOut(); // Sign out unverified user
+            return;
+          }
+
           const { data: profile } = await supabase
             .from("users")
             .select("role")
             .eq("id", data.user.id)
             .single();
+
           const userRole = profile?.role || "student";
+          toast.success("Login successful!");
           router.push(`/dashboard/${userRole}`);
         }
       }
     } catch (error: any) {
       setError(error.message);
+      toast.error(error.message || "Unexpected authentication error!");
     } finally {
       setLoading(false);
     }
@@ -96,11 +146,19 @@ export default function AuthForm({ mode }: AuthFormProps) {
               : "Join our platform and start learning today"}
           </p>
         </div>
+
         {error && (
-          <div className="bg-red-100 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-5 shadow-sm animate-shake">
+          <div
+            className={`border px-4 py-3 rounded-lg mb-5 shadow-sm animate-shake ${
+              error.includes("✅")
+                ? "bg-green-100 border-green-200 text-green-700"
+                : "bg-red-100 border-red-200 text-red-700"
+            }`}
+          >
             {error}
           </div>
         )}
+
         <form onSubmit={handleSubmit} className="space-y-5">
           {mode === "register" && (
             <>
@@ -114,12 +172,13 @@ export default function AuthForm({ mode }: AuthFormProps) {
                     type="text"
                     value={name}
                     onChange={(e) => setName(e.target.value)}
-                    className="input-field pl-10 rounded-xl border border-blue-100 focus:ring-2 focus:ring-blue-300 transition-all"
+                    className="input-field pl-10 rounded-xl border border-blue-100 focus:ring-2 focus:ring-blue-300 transition-all w-full py-3 px-4"
                     placeholder="Your full name"
                     required
                   />
                 </div>
               </div>
+
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-1">
                   Role
@@ -131,7 +190,7 @@ export default function AuthForm({ mode }: AuthFormProps) {
                     onChange={(e) =>
                       setRole(e.target.value as "student" | "teacher")
                     }
-                    className="input-field pl-10 pr-10 rounded-xl border border-blue-100 focus:ring-2 focus:ring-indigo-300 bg-white transition-all appearance-none text-gray-800 font-medium shadow-sm h-12 hover:bg-indigo-50 focus:border-indigo-400 group"
+                    className="input-field pl-10 pr-10 rounded-xl border border-blue-100 focus:ring-2 focus:ring-indigo-300 bg-white transition-all appearance-none text-gray-800 font-medium shadow-sm h-12 hover:bg-indigo-50 focus:border-indigo-400 w-full"
                     required
                     style={{
                       backgroundImage:
@@ -147,6 +206,7 @@ export default function AuthForm({ mode }: AuthFormProps) {
               </div>
             </>
           )}
+
           <div>
             <label className="block text-sm font-semibold text-gray-700 mb-1">
               Email Address
@@ -157,12 +217,13 @@ export default function AuthForm({ mode }: AuthFormProps) {
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="input-field pl-10 rounded-xl border border-blue-100 focus:ring-2 focus:ring-blue-300 transition-all"
+                className="input-field pl-10 rounded-xl border border-blue-100 focus:ring-2 focus:ring-blue-300 transition-all w-full py-3 px-4"
                 placeholder="you@example.com"
                 required
               />
             </div>
           </div>
+
           <div>
             <label className="block text-sm font-semibold text-gray-700 mb-1">
               Password
@@ -173,7 +234,7 @@ export default function AuthForm({ mode }: AuthFormProps) {
                 type={showPassword ? "text" : "password"}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="input-field pl-10 pr-10 rounded-xl border border-blue-100 focus:ring-2 focus:ring-blue-300 transition-all"
+                className="input-field pl-10 pr-10 rounded-xl border border-blue-100 focus:ring-2 focus:ring-blue-300 transition-all w-full py-3 px-4"
                 placeholder="Enter a password"
                 required
                 minLength={6}
@@ -192,6 +253,7 @@ export default function AuthForm({ mode }: AuthFormProps) {
               </button>
             </div>
           </div>
+
           <button
             type="submit"
             disabled={loading}
@@ -214,6 +276,7 @@ export default function AuthForm({ mode }: AuthFormProps) {
             )}
           </button>
         </form>
+
         <div className="mt-8 text-center text-sm">
           <p className="text-blue-700 font-medium">
             {mode === "login"

@@ -4,6 +4,9 @@ import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { ArrowLeft, Plus, Edit, Trash2, BookOpen, Save, X } from "lucide-react";
 import Link from "next/link";
+import { toast } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
+import { Toaster } from "react-hot-toast";
 
 interface Question {
   id: string;
@@ -78,6 +81,7 @@ export default function QuestionManagement() {
         }),
       });
 
+      // in handleAddQuestion after successful add:
       if (response.ok) {
         setNewQuestion({
           question_text: "",
@@ -89,6 +93,7 @@ export default function QuestionManagement() {
         });
         setShowAddForm(false);
         fetchQuiz(); // Refresh the quiz data
+        toast.success("Question added successfully!");
       } else {
         alert("Failed to add question. Please try again.");
       }
@@ -122,9 +127,11 @@ export default function QuestionManagement() {
         }),
       });
 
+      // in handleEditQuestion after successful update:
       if (response.ok) {
         setEditingQuestion(null);
         fetchQuiz(); // Refresh the quiz data
+        toast.success("Question updated successfully!");
       } else {
         alert("Failed to update question. Please try again.");
       }
@@ -137,28 +144,52 @@ export default function QuestionManagement() {
   };
 
   const handleDeleteQuestion = async (questionId: string) => {
-    if (
-      !confirm(
-        "Are you sure you want to delete this question? This action cannot be undone."
-      )
-    ) {
-      return;
-    }
+    const toastId = toast(
+      (t) => (
+        <div className="p-4">
+          <div className="mb-3 font-semibold text-gray-900">
+            Delete this question?
+          </div>
+          <div className="flex gap-2 justify-end">
+            <button
+              className="px-3 py-1 text-sm bg-gray-100 hover:bg-gray-200 text-gray-700 rounded"
+              onClick={() => toast.dismiss(toastId)}
+            >
+              Cancel
+            </button>
+            <button
+              className="px-3 py-1 text-sm bg-red-600 hover:bg-red-700 text-white rounded"
+              onClick={async () => {
+                toast.dismiss(toastId);
+                try {
+                  const response = await fetch(`/api/questions/${questionId}`, {
+                    method: "DELETE",
+                  });
 
-    try {
-      const response = await fetch(`/api/questions/${questionId}`, {
-        method: "DELETE",
-      });
-
-      if (response.ok) {
-        fetchQuiz(); // Refresh the quiz data
-      } else {
-        alert("Failed to delete question. Please try again.");
+                  if (response.ok) {
+                    fetchQuiz(); // Refresh the quiz data
+                    toast.success("Question deleted successfully!");
+                  } else {
+                    toast.error("Failed to delete question. Please try again.");
+                  }
+                } catch (error) {
+                  console.error("Error deleting question:", error);
+                  toast.error("Failed to delete question. Please try again.");
+                }
+              }}
+            >
+              Delete
+            </button>
+          </div>
+        </div>
+      ),
+      {
+        autoClose: 10000,
+        position: "top-center",
+        closeOnClick: false,
+        closeButton: false,
       }
-    } catch (error) {
-      console.error("Error deleting question:", error);
-      alert("Failed to delete question. Please try again.");
-    }
+    );
   };
 
   if (loading) {

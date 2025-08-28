@@ -4,7 +4,8 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/app/lib/supabase/client";
-import { User, LogOut, BookOpen, Menu, X } from "lucide-react";
+import { User, LogOut, BookOpen, Menu, X, Loader } from "lucide-react";
+import { toast } from "react-toastify";
 
 // Utility to get initials for avatar fallback
 function getInitials(name: string) {
@@ -19,6 +20,7 @@ export default function Navbar() {
   const [user, setUser] = useState<any>(null);
   const [userProfile, setUserProfile] = useState<any>(null);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isLoading, setIsLoading] = useState(true); // ✨ Add loading state
   const router = useRouter();
   const supabase = createClient();
 
@@ -33,6 +35,7 @@ export default function Navbar() {
   }, []);
 
   const getUser = async () => {
+    setIsLoading(true); // ✨ Set loading when fetching user
     const {
       data: { user },
     } = await supabase.auth.getUser();
@@ -48,12 +51,39 @@ export default function Navbar() {
     } else {
       setUserProfile(null);
     }
+    setIsLoading(false); // ✨ Loading complete
   };
 
   const handleLogout = async () => {
+    setIsLoading(true);
     await supabase.auth.signOut();
-    router.push("/");
+    toast.success("You have been logged out.");
+
+    // Add small delay to let user see the toast
+    setTimeout(() => {
+      router.push("/auth/login");
+      setIsLoading(false);
+    }, 1000);
   };
+
+  // ✨ Show loading state while determining auth status
+  if (isLoading) {
+    return (
+      <nav className="bg-white shadow-sm border-b border-gray-200 sticky top-0 z-50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex justify-between items-center h-16">
+            <Link href="/" className="flex items-center space-x-2">
+              <BookOpen className="h-8 w-8 text-indigo-600" />
+              <span className="text-xl font-bold text-gray-900">QuizLearn</span>
+            </Link>
+            <div className="flex items-center">
+              <Loader className="h-5 w-5 animate-spin text-gray-400" />
+            </div>
+          </div>
+        </div>
+      </nav>
+    );
+  }
 
   return (
     <nav className="bg-white shadow-sm border-b border-gray-200 sticky top-0 z-50">
@@ -70,18 +100,6 @@ export default function Navbar() {
             {user ? (
               <>
                 <div className="flex items-center space-x-2">
-                  <Link
-                    href={`/dashboard/${userProfile?.role || "student"}`}
-                    className="text-gray-700 hover:text-indigo-700 px-3 py-2 rounded-md text-base font-semibold transition-colors flex items-center"
-                  >
-                    Dashboard
-                    {userProfile?.name && (
-                      <span className="ml-2 text-indigo-800 font-semibold text-base">
-                        {userProfile.name}
-                      </span>
-                    )}
-                  </Link>
-                  {/* Role badge bigger and visible */}
                   {userProfile?.role && (
                     <span className="ml-2 px-4 py-1 rounded-full bg-indigo-600 text-white font-extrabold text-lg shadow capitalize">
                       {userProfile.role}
@@ -98,6 +116,7 @@ export default function Navbar() {
                     onClick={handleLogout}
                     className="text-gray-500 hover:text-red-600 p-2 rounded-md transition-colors"
                     title="Logout"
+                    disabled={isLoading}
                   >
                     <LogOut className="h-5 w-5" />
                   </button>
@@ -173,8 +192,9 @@ export default function Navbar() {
                     setIsMenuOpen(false);
                   }}
                   className="block w-full text-left text-red-700 hover:text-red-900 px-3 py-2 rounded font-medium transition"
+                  disabled={isLoading}
                 >
-                  Logout
+                  {isLoading ? "Logging out..." : "Logout"}
                 </button>
               </>
             ) : (
